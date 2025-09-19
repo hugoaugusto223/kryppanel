@@ -1,108 +1,167 @@
---// Serviços
+--[[ 
+Brainrot Counter + Webhook
+Versão final para upload no GitHub e rodar via executor
+--]]
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
-local StarterGui = game:GetService("StarterGui")
 
---// CONFIGURAÇÃO DO WEBHOOK
+-- ===============================
+-- CONFIGURAÇÕES
+-- ===============================
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742012403777576/DAfbKA6HMqGx4wLq3DxLC4MXgao5t3FYB68a7S6GjMXnrqR7w6G6WS4VTAORXVy9WReO"
 
---// Função para criar GUI com botão
-local function createButton()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "BrainrotCounter"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = game.CoreGui
+-- ===============================
+-- FUNÇÃO HTTP COMPATÍVEL COM EXECUTORES
+-- ===============================
+local function sendRequest(data)
+    local requestFunc = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
 
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(0, 200, 0, 50)
-    button.Position = UDim2.new(0.5, -100, 0.9, 0) -- centro inferior
-    button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 18
-    button.Text = "Enviar Brainrots"
-    button.Parent = screenGui
+    if not requestFunc then
+        warn("Executor não suporta requisições HTTP!")
+        return false, "Executor não suporta requisições HTTP!"
+    end
 
-    return button
+    local success, err = pcall(function()
+        requestFunc({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode(data)
+        })
+    end)
+
+    return success, err
 end
 
---// Função que faz a contagem por player
+-- ===============================
+-- CONTABILIDADE DE BRAINROTS
+-- ===============================
 local function contarBrainrots()
-    local resultado = {}
+    local brainrotStats = {}
 
     for _, o in ipairs(Workspace:GetDescendants()) do
         if o:IsA("TextLabel") and o.Name == "Generation" and not o.Text:lower():find("fusing") then
             local parent = o.Parent
-            local ownerName = "Desconhecido"
-
-            -- Tenta descobrir o dono do brainrot
-            local p = o:FindFirstAncestorWhichIsA("Model")
-            if p and p:FindFirstChild("Owner") and p.Owner:IsA("StringValue") then
-                ownerName = p.Owner.Value
+            local basePart
+            while parent and parent ~= Workspace do
+                if parent:IsA("Model") and parent:FindFirstChild("Base") then
+                    basePart = parent.Base
+                    break
+                end
+                parent = parent.Parent
             end
 
-            -- Nome do brainrot
-            local displayName = o.Parent:FindFirstChild("DisplayName")
-            local mobName = displayName and displayName.Text or "N/A"
+            if basePart then
+                -- Nome do brainrot
+                local displayName = o.Parent:FindFirstChild("DisplayName")
+                local mobName = displayName and displayName.Text or "N/A"
 
-            -- Inicializa tabelas se não existirem
-            if not resultado[ownerName] then
-                resultado[ownerName] = {}
+                if not brainrotStats[mobName] then
+                    brainrotStats[mobName] = 0
+                end
+                brainrotStats[mobName] += 1
             end
-            if not resultado[ownerName][mobName] then
-                resultado[ownerName][mobName] = 0
-            end
-
-            resultado[ownerName][mobName] += 1
         end
     end
 
-    return resultado
+    return brainrotStats
 end
 
---// Formata a mensagem pro Discord
-local function formatarMensagem(dados)
+-- ===============================
+-- GERAR TEXTO PRO DISCORD
+-- ===============================
+local function gerarMensagem(brainrotStats)
     local linhas = {}
-    table.insert(linhas, "**📊 Contagem de Brainrots**\n")
-
-    for playerName, brainrots in pairs(dados) do
-        table.insert(linhas, "**" .. playerName .. "**:")
-        for brainrotName, quantidade in pairs(brainrots) do
-            table.insert(linhas, string.format("`%dx` %s", quantidade, brainrotName))
-        end
-        table.insert(linhas, "") -- Linha em branco entre players
+    for nome, quantidade in pairs(brainrotStats) do
+        table.insert(linhas, string.format("%dx %s", quantidade, nome))
     end
 
-    return table.concat(linhas, "\n")
-end
-
---// Envia os dados pro Discord
-local function enviarParaDiscord()
-    local dados = contarBrainrots()
-    local mensagem = formatarMensagem(dados)
-
-    local payload = HttpService:JSONEncode({content = mensagem})
-
-    local success, err = pcall(function()
-        HttpService:PostAsync(WEBHOOK_URL, payload, Enum.HttpContentType.ApplicationJson)
-    end)
-
-    if success then
-        StarterGui:SetCore("SendNotification", {
-            Title = "Brainrot Counter",
-            Text = "✅ Dados enviados com sucesso!",
-            Duration = 3
-        })
+    if #linhas == 0 then
+        return "Nenhum brainrot encontrado no mapa."
     else
-        StarterGui:SetCore("SendNotification", {
-            Title = "Brainrot Counter",
-            Text = "❌ Erro ao enviar: " .. tostring(err),
-            Duration = 5
-        })
+        table.sort(linhas) -- organiza em ordem alfabética
+        return "**Contagem de Brainrots:**\n" .. table.concat(linhas, "\n")
     end
 end
 
---// Inicializa GUI
-local button = createButton()
-button.MouseButton1Click:Connect(enviarParaDiscord)
+-- ===============================
+-- GUI SIMPLES COM BOTÃO
+-- ===============================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "BrainrotCounter"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 220, 0, 120)
+Frame.Position = UDim2.new(0, 20, 0, 200)
+Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame.BorderSizePixel = 0
+Frame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = Frame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 30)
+Title.BackgroundTransparency = 1
+Title.Text = "Brainrot Counter"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextScaled = true
+Title.Parent = Frame
+
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 30)
+StatusLabel.Position = UDim2.new(0, 10, 0, 35)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.Text = "Aguardando envio..."
+StatusLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.TextScaled = true
+StatusLabel.Parent = Frame
+
+local SendButton = Instance.new("TextButton")
+SendButton.Size = UDim2.new(1, -20, 0, 35)
+SendButton.Position = UDim2.new(0, 10, 0, 75)
+SendButton.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
+SendButton.Text = "Enviar para Discord"
+SendButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SendButton.Font = Enum.Font.GothamBold
+SendButton.TextScaled = true
+SendButton.Parent = Frame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 8)
+BtnCorner.Parent = SendButton
+
+-- ===============================
+-- LÓGICA DO BOTÃO
+-- ===============================
+SendButton.MouseButton1Click:Connect(function()
+    StatusLabel.Text = "Contando brainrots..."
+    StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+
+    local stats = contarBrainrots()
+    local mensagem = gerarMensagem(stats)
+
+    local payload = {
+        username = "Brainrot Bot",
+        content = mensagem
+    }
+
+    local ok, err = sendRequest(payload)
+    if ok then
+        StatusLabel.Text = "Enviado com sucesso!"
+        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+    else
+        StatusLabel.Text = "Erro ao enviar!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        warn("Erro ao enviar: ", err)
+    end
+end)
