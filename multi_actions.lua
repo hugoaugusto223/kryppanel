@@ -1,5 +1,5 @@
 --[[ 
-Brainrot Counter + Webhook (versão Wave) - com M
+Brainrot Counter + Webhook (versão Wave) - separado por Player
 --]]
 
 local Players = game:GetService("Players")
@@ -35,17 +35,23 @@ local function sendRequest(data)
     return true, response
 end
 
--- Contabiliza brainrots e soma M
+-- Contabiliza brainrots separados por Player
 local function contarBrainrots()
-    local brainrotStats = {}
+    local playerStats = {}
 
     for _, o in ipairs(Workspace:GetDescendants()) do
         if o:IsA("TextLabel") and o.Name == "Generation" and not o.Text:lower():find("fusing") then
             local parent = o.Parent
             local basePart
+            local ownerName = "Desconhecido"
+
             while parent and parent ~= Workspace do
                 if parent:IsA("Model") and parent:FindFirstChild("Base") then
                     basePart = parent.Base
+                    -- Tentando achar o dono da base (Player)
+                    if parent:FindFirstChild("Owner") and parent.Owner.Value then
+                        ownerName = tostring(parent.Owner.Value)
+                    end
                     break
                 end
                 parent = parent.Parent
@@ -55,34 +61,42 @@ local function contarBrainrots()
                 local displayName = o.Parent:FindFirstChild("DisplayName")
                 local mobName = displayName and displayName.Text or "N/A"
 
-                local mValueLabel = o.Parent:FindFirstChild("MValue") -- ajuste conforme seu jogo
+                local mValueLabel = o.Parent:FindFirstChild("MValue")
                 local mValue = tonumber(mValueLabel and mValueLabel.Text:match("%d+")) or 0
 
-                if not brainrotStats[mobName] then
-                    brainrotStats[mobName] = {count = 0, totalM = 0}
+                if not playerStats[ownerName] then
+                    playerStats[ownerName] = {}
                 end
 
-                brainrotStats[mobName].count += 1
-                brainrotStats[mobName].totalM += mValue
+                if not playerStats[ownerName][mobName] then
+                    playerStats[ownerName][mobName] = {count = 0, totalM = 0}
+                end
+
+                playerStats[ownerName][mobName].count += 1
+                playerStats[ownerName][mobName].totalM += mValue
             end
         end
     end
 
-    return brainrotStats
+    return playerStats
 end
 
--- Gera mensagem formatada pro Discord
-local function gerarMensagem(brainrotStats)
+-- Gera mensagem formatada por Player
+local function gerarMensagem(playerStats)
     local linhas = {}
-    for nome, info in pairs(brainrotStats) do
-        table.insert(linhas, string.format("**%dx %s** — Total M: %d", info.count, nome, info.totalM))
+
+    for playerName, mobs in pairs(playerStats) do
+        table.insert(linhas, "**🎯 Player: " .. playerName .. "**")
+        for mobName, info in pairs(mobs) do
+            table.insert(linhas, string.format("  - %dx %s — Total M: %d", info.count, mobName, info.totalM))
+        end
+        table.insert(linhas, "") -- linha em branco entre players
     end
 
     if #linhas == 0 then
         return "Nenhum brainrot encontrado no mapa."
     else
-        table.sort(linhas)
-        return "**📊 Contagem de Brainrots:**\n" .. table.concat(linhas, "\n")
+        return "**📊 Contagem de Brainrots por Player:**\n" .. table.concat(linhas, "\n")
     end
 end
 
@@ -96,7 +110,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 260, 0, 140)
+Frame.Size = UDim2.new(0, 300, 0, 160)
 Frame.Position = UDim2.new(0, 20, 0, 200)
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
