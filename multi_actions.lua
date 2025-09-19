@@ -115,7 +115,7 @@ local function createPlayerButton(targetPlayer)
                 if event then
                     event:FireServer(capturedPlayer, cmd)
                 end
-                task.wait(0.5)
+                task.wait(0.05) -- delay mínimo para não floodar
             end
         end)
     end)
