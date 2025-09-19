@@ -20,7 +20,8 @@ local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,250,0,300)
 frame.Position = UDim2.new(0,1660,0,626)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0) -- preto
-frame.BackgroundTransparency = 0.1
+frame.BackgroundTransparency = 0 -- transparente demais atrapalha arredondamento
+frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
 -- Borda arredondada no painel
@@ -32,7 +33,7 @@ frameCorner.Parent = frame
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "KrypAdmin V2"
+title.Text = "GlitchC V2"
 title.TextColor3 = Color3.fromRGB(144,238,144) -- verde claro
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -56,7 +57,6 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.Parent = scrollFrame
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    -- CanvasSize atualizado apenas se mudou significativamente
     local newY = layout.AbsoluteContentSize.Y + 10
     if scrollFrame.CanvasSize.Y.Offset ~= newY then
         scrollFrame.CanvasSize = UDim2.new(0,0,0,newY)
