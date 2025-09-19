@@ -1,6 +1,5 @@
 --[[ 
-Brainrot Counter + Webhook
-Versão final para upload no GitHub e rodar via executor
+Brainrot Counter + Webhook (versão executor)
 --]]
 
 local Players = game:GetService("Players")
@@ -13,28 +12,37 @@ local HttpService = game:GetService("HttpService")
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742012403777576/DAfbKA6HMqGx4wLq3DxLC4MXgao5t3FYB68a7S6GjMXnrqR7w6G6WS4VTAORXVy9WReO"
 
 -- ===============================
--- FUNÇÃO HTTP COMPATÍVEL COM EXECUTORES
+-- FUNÇÃO HTTP SOMENTE EXECUTOR
 -- ===============================
-local function sendRequest(data)
-    local requestFunc = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
+local request = http_request or request or syn and syn.request or fluxus and fluxus.request
+if not request then
+    warn("Seu executor não suporta requisições HTTP!")
+end
 
-    if not requestFunc then
-        warn("Executor não suporta requisições HTTP!")
-        return false, "Executor não suporta requisições HTTP!"
+local function sendRequest(data)
+    if not request then
+        return false, "Executor não tem suporte a HTTP"
     end
 
-    local success, err = pcall(function()
-        requestFunc({
-            Url = WEBHOOK_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = HttpService:JSONEncode(data)
-        })
+    local payload = {
+        Url = WEBHOOK_URL,
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "application/json"
+        },
+        Body = HttpService:JSONEncode(data)
+    }
+
+    local success, response = pcall(function()
+        return request(payload)
     end)
 
-    return success, err
+    if not success then
+        warn("Erro na requisição:", response)
+        return false, response
+    end
+
+    return true, response
 end
 
 -- ===============================
