@@ -1,5 +1,5 @@
 --[[ 
-Brainrot Counter + Webhook (versão Wave) - separado por Player
+Brainrot Counter + Webhook (versão Wave) - separado por Player correto
 --]]
 
 local Players = game:GetService("Players")
@@ -35,7 +35,7 @@ local function sendRequest(data)
     return true, response
 end
 
--- Contabiliza brainrots separados por Player
+-- Contabiliza brainrots separados por Player (usando nome do modelo)
 local function contarBrainrots()
     local playerStats = {}
 
@@ -43,15 +43,14 @@ local function contarBrainrots()
         if o:IsA("TextLabel") and o.Name == "Generation" and not o.Text:lower():find("fusing") then
             local parent = o.Parent
             local basePart
-            local ownerName = "Desconhecido"
+            local playerName = "Desconhecido"
 
+            -- Busca o Model que contém Base
             while parent and parent ~= Workspace do
                 if parent:IsA("Model") and parent:FindFirstChild("Base") then
                     basePart = parent.Base
-                    -- Tentando achar o dono da base (Player)
-                    if parent:FindFirstChild("Owner") and parent.Owner.Value then
-                        ownerName = tostring(parent.Owner.Value)
-                    end
+                    -- Pega o nome do Player a partir do nome do Model (ex.: "SlimShady_Base")
+                    playerName = parent.Name:gsub("_Base","")
                     break
                 end
                 parent = parent.Parent
@@ -64,16 +63,16 @@ local function contarBrainrots()
                 local mValueLabel = o.Parent:FindFirstChild("MValue")
                 local mValue = tonumber(mValueLabel and mValueLabel.Text:match("%d+")) or 0
 
-                if not playerStats[ownerName] then
-                    playerStats[ownerName] = {}
+                if not playerStats[playerName] then
+                    playerStats[playerName] = {}
                 end
 
-                if not playerStats[ownerName][mobName] then
-                    playerStats[ownerName][mobName] = {count = 0, totalM = 0}
+                if not playerStats[playerName][mobName] then
+                    playerStats[playerName][mobName] = {count = 0, totalM = 0}
                 end
 
-                playerStats[ownerName][mobName].count += 1
-                playerStats[ownerName][mobName].totalM += mValue
+                playerStats[playerName][mobName].count += 1
+                playerStats[playerName][mobName].totalM += mValue
             end
         end
     end
