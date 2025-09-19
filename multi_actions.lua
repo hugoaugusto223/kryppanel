@@ -17,10 +17,10 @@ screenGui.Parent = PlayerGui
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,250,0,300)
-frame.Position = UDim2.new(0,1660,0,626)
-frame.BackgroundColor3 = Color3.fromRGB(0,0,0) -- preto
-frame.BackgroundTransparency = 0 -- transparente demais atrapalha arredondamento
+frame.Size = UDim2.new(0,250,0,350)
+frame.Position = UDim2.new(0,1660,0,600)
+frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
+frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
 frame.Parent = screenGui
 
@@ -34,21 +34,60 @@ local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
 title.Text = "GlitchC V2"
-title.TextColor3 = Color3.fromRGB(144,238,144) -- verde claro
+title.TextColor3 = Color3.fromRGB(144,238,144)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
--- ScrollingFrame
+-- Botão para ativar/desativar ESP
+local espEnabled = false
+local espButton = Instance.new("TextButton")
+espButton.Size = UDim2.new(0.9,0,0,30)
+espButton.Position = UDim2.new(0.05,0,0,35)
+espButton.BackgroundColor3 = Color3.fromRGB(100,0,100)
+espButton.TextColor3 = Color3.fromRGB(255,255,255)
+espButton.Text = "ESP: OFF"
+espButton.Font = Enum.Font.Gotham
+espButton.TextScaled = true
+espButton.Parent = frame
+
+local function toggleESP()
+    espEnabled = not espEnabled
+    espButton.Text = espEnabled and "ESP: ON" or "ESP: OFF"
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player.Character then
+            local highlight = player.Character:FindFirstChild("ESP_Highlight")
+            if espEnabled then
+                if not highlight then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "ESP_Highlight"
+                    highlight.Adornee = player.Character
+                    highlight.FillColor = Color3.fromRGB(255,200,100)
+                    highlight.FillTransparency = 0.5
+                    highlight.OutlineTransparency = 1
+                    highlight.Parent = player.Character
+                end
+            else
+                if highlight then
+                    highlight:Destroy()
+                end
+            end
+        end
+    end
+end
+
+espButton.MouseButton1Click:Connect(toggleESP)
+
+-- ScrollingFrame para botões de players
 local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(1,0,1,-30)
-scrollFrame.Position = UDim2.new(0,0,0,30)
+scrollFrame.Size = UDim2.new(1,0,1,-70)
+scrollFrame.Position = UDim2.new(0,0,0,70)
 scrollFrame.BackgroundTransparency = 1
 scrollFrame.ScrollBarThickness = 6
 scrollFrame.CanvasSize = UDim2.new(0,0,0,0)
 scrollFrame.Parent = frame
 
--- Layout centralizado e otimizado
 local layout = Instance.new("UIListLayout")
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0,5)
@@ -57,10 +96,7 @@ layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 layout.Parent = scrollFrame
 
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    local newY = layout.AbsoluteContentSize.Y + 10
-    if scrollFrame.CanvasSize.Y.Offset ~= newY then
-        scrollFrame.CanvasSize = UDim2.new(0,0,0,newY)
-    end
+    scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 end)
 
 -- Tornar frame arrastável
@@ -101,8 +137,8 @@ end
 local function createPlayerButton(targetPlayer)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0.9,0,0,30)
-    button.BackgroundColor3 = Color3.fromRGB(40,40,40) -- cinza escuro
-    button.TextColor3 = Color3.fromRGB(255,255,255) -- branco
+    button.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    button.TextColor3 = Color3.fromRGB(255,255,255)
     button.Text = targetPlayer.Name
     button.Font = Enum.Font.Gotham
     button.TextScaled = true
@@ -114,7 +150,6 @@ local function createPlayerButton(targetPlayer)
 
     local capturedPlayer = targetPlayer
 
-    -- Clique: dispara todos os comandos simultaneamente
     button.MouseButton1Click:Connect(function()
         for _, cmd in ipairs(commands) do
             task.spawn(function()
