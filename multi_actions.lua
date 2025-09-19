@@ -1,5 +1,5 @@
 --[[ 
-Brainrot Counter + Webhook (versão executor)
+Brainrot Counter + Webhook (versão Wave)
 --]]
 
 local Players = game:GetService("Players")
@@ -16,7 +16,7 @@ local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742012403777576/DAfbKA
 -- ===============================
 local request = http_request or request or syn and syn.request or fluxus and fluxus.request
 if not request then
-    warn("Seu executor não suporta requisições HTTP!")
+    warn("❌ Seu executor não suporta requisições HTTP!")
 end
 
 local function sendRequest(data)
@@ -64,7 +64,6 @@ local function contarBrainrots()
             end
 
             if basePart then
-                -- Nome do brainrot
                 local displayName = o.Parent:FindFirstChild("DisplayName")
                 local mobName = displayName and displayName.Text or "N/A"
 
@@ -91,7 +90,7 @@ local function gerarMensagem(brainrotStats)
     if #linhas == 0 then
         return "Nenhum brainrot encontrado no mapa."
     else
-        table.sort(linhas) -- organiza em ordem alfabética
+        table.sort(linhas)
         return "**Contagem de Brainrots:**\n" .. table.concat(linhas, "\n")
     end
 end
@@ -99,10 +98,16 @@ end
 -- ===============================
 -- GUI SIMPLES COM BOTÃO
 -- ===============================
+local player = Players.LocalPlayer
+if not player then
+    warn("LocalPlayer não encontrado. Execute isso como LocalScript.")
+    return
+end
+
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BrainrotCounter"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 220, 0, 120)
