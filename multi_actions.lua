@@ -1,39 +1,64 @@
+-- painel_debug.lua
+-- Versão pronta para colar no executor (cliente). Logs e fallbacks inclusos.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
--- Lista de comandos filtrada (control e tiny removidos)
 local commands = {"rocket", "ragdoll", "balloon", "inverse", "nightvision", "jail", "jumpscare"}
 
--- Espera LocalPlayer e PlayerGui
 local LocalPlayer = Players.LocalPlayer
-while not LocalPlayer do task.wait() end
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+print("[debug] LocalPlayer inicial:", LocalPlayer and LocalPlayer.Name or "nil")
 
--- Criar ScreenGui
+local tryWait = 0
+while not LocalPlayer and tryWait < 5 do
+    task.wait(0.5)
+    LocalPlayer = Players.LocalPlayer
+    tryWait = tryWait + 0.5
+    print(("[debug] esperando LocalPlayer... (%.1f)"):format(tryWait))
+end
+
+if not LocalPlayer then
+    print("[erro] LocalPlayer não disponível. Executor pode não estar injetando no contexto do cliente.")
+    return
+end
+
+local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+if not PlayerGui then
+    print("[aviso] PlayerGui não encontrado. Tentando fallback para CoreGui.")
+end
+
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AlwaysVisibleAdminPanel"
-screenGui.Parent = PlayerGui
+screenGui.Name = "AlwaysVisibleAdminPanel_debug"
 
--- Frame principal
+if PlayerGui then
+    screenGui.Parent = PlayerGui
+    print("[debug] ScreenGui parentado em PlayerGui")
+else
+    local ok, err = pcall(function() screenGui.Parent = game:GetService("CoreGui") end)
+    if ok then
+        print("[debug] ScreenGui parentado em CoreGui (fallback)")
+    else
+        print("[erro] não foi possível parentar em CoreGui:", err)
+    end
+end
+
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,250,0,300)
-frame.Position = UDim2.new(0,1660,0,626) -- <<--- posição ajustada
+frame.AnchorPoint = Vector2.new(1,1)
+frame.Position = UDim2.new(1,-20,1,-20)
 frame.BackgroundColor3 = Color3.fromRGB(50,0,50)
 frame.BackgroundTransparency = 0.1
 frame.Parent = screenGui
 
--- Título
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "kryp loves mgby"
+title.Text = "kryp loves mgby (debug)"
 title.TextColor3 = Color3.new(1,1,1)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
--- ScrollingFrame
 local scrollFrame = Instance.new("ScrollingFrame")
 scrollFrame.Size = UDim2.new(1,0,1,-30)
 scrollFrame.Position = UDim2.new(0,0,0,30)
@@ -42,7 +67,6 @@ scrollFrame.CanvasSize = UDim2.new(0,0,0,0)
 scrollFrame.ScrollBarThickness = 6
 scrollFrame.Parent = frame
 
--- Layout centralizado horizontalmente
 local layout = Instance.new("UIListLayout")
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0,5)
@@ -53,10 +77,11 @@ layout.Parent = scrollFrame
 layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 end)
+scrollFrame.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 
--- Tornar frame arrastável
 do
     local dragging, dragInput, mousePos, framePos
+
     local function update(input)
         local delta = input.Position - mousePos
         frame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
@@ -88,7 +113,31 @@ do
     end)
 end
 
--- Função para criar botão de player
+local function getExecuteEvent()
+    if ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Net") then
+        local net = ReplicatedStorage.Packages.Net
+        local candidate = net:FindFirstChild("RE/AdminPanelService/ExecuteCommand")
+        if candidate then
+            print("[debug] encontrou ExecuteCommand no caminho esperado")
+            return candidate
+        end
+        for _,v in ipairs(net:GetDescendants()) do
+            if v:IsA("RemoteEvent") and string.find(v.Name:lower(), "execute") and string.find(v.Name:lower(), "command") then
+                print("[debug] encontrou RemoteEvent parecido:", v:GetFullName())
+                return v
+            end
+        end
+    else
+        print("[debug] Packages/Net não encontrados em ReplicatedStorage")
+    end
+    return nil
+end
+
+local event = getExecuteEvent()
+if not event then
+    print("[aviso] RemoteEvent ExecuteCommand não encontrado — as chamadas FireServer serão puladas.")
+end
+
 local function createPlayerButton(targetPlayer)
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0.9,0,0,30)
@@ -106,14 +155,20 @@ local function createPlayerButton(targetPlayer)
     local capturedPlayer = targetPlayer
 
     button.MouseButton1Click:Connect(function()
+        print(("[debug] botão clicado em %s"):format(capturedPlayer.Name))
         task.spawn(function()
             for _, cmd in ipairs(commands) do
-                local event
-                if ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Net") then
-                    event = ReplicatedStorage.Packages.Net:FindFirstChild("RE/AdminPanelService/ExecuteCommand")
-                end
                 if event then
-                    event:FireServer(capturedPlayer, cmd)
+                    local ok, err = pcall(function()
+                        event:FireServer(capturedPlayer, cmd)
+                    end)
+                    if not ok then
+                        print(("[erro] FireServer falhou para %s com comando %s -> %s"):format(capturedPlayer.Name, cmd, tostring(err)))
+                    else
+                        print(("[debug] FireServer chamado para %s com %s"):format(capturedPlayer.Name, cmd))
+                    end
+                else
+                    print("[debug] nenhum event para FireServer, pulando chamada")
                 end
                 task.wait(0.5)
             end
@@ -121,16 +176,16 @@ local function createPlayerButton(targetPlayer)
     end)
 end
 
--- Criar botões para todos os players online
 for _, player in ipairs(Players:GetPlayers()) do
     if player ~= LocalPlayer then
         createPlayerButton(player)
     end
 end
 
--- Atualizar quando alguém entrar
 Players.PlayerAdded:Connect(function(player)
     if player ~= LocalPlayer then
         createPlayerButton(player)
     end
 end)
+
+print("[debug] script de painel pronto")
