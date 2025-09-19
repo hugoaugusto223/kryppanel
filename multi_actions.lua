@@ -17,8 +17,8 @@ screenGui.Parent = PlayerGui
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,250,0,350)
-frame.Position = UDim2.new(0,1660,0,600)
+frame.Size = UDim2.new(0,250,0,380)
+frame.Position = UDim2.new(0,1660,0,580)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 frame.BackgroundTransparency = 0
 frame.BorderSizePixel = 0
@@ -33,7 +33,7 @@ frameCorner.Parent = frame
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "GlitchC V2"
+title.Text = "GlitchC V3"
 title.TextColor3 = Color3.fromRGB(144,238,144)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
