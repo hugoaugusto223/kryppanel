@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 
--- Lista de comandos filtrada (control e tiny removidos)
+-- Lista de comandos filtrada
 local commands = {"rocket", "ragdoll", "balloon", "inverse", "nightvision", "jail", "jumpscare"}
 
 -- Espera LocalPlayer e PlayerGui
@@ -18,7 +18,7 @@ screenGui.Parent = PlayerGui
 -- Frame principal
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0,250,0,300)
-frame.Position = UDim2.new(0,1660,0,626) 
+frame.Position = UDim2.new(0,1660,0,626)
 frame.BackgroundColor3 = Color3.fromRGB(0,0,0) -- preto
 frame.BackgroundTransparency = 0.1
 frame.Parent = screenGui
@@ -27,7 +27,7 @@ frame.Parent = screenGui
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1,0,0,30)
 title.BackgroundTransparency = 1
-title.Text = "KrypAdmin V2" -- novo título
+title.Text = "KrypAdmin V2" -- título atualizado
 title.TextColor3 = Color3.fromRGB(255,255,255) -- branco
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
@@ -105,9 +105,10 @@ local function createPlayerButton(targetPlayer)
 
     local capturedPlayer = targetPlayer
 
+    -- Clique no botão: dispara todos os comandos instantaneamente
     button.MouseButton1Click:Connect(function()
-        task.spawn(function()
-            for _, cmd in ipairs(commands) do
+        for _, cmd in ipairs(commands) do
+            task.spawn(function()
                 local event
                 if ReplicatedStorage:FindFirstChild("Packages") and ReplicatedStorage.Packages:FindFirstChild("Net") then
                     event = ReplicatedStorage.Packages.Net:FindFirstChild("RE/AdminPanelService/ExecuteCommand")
@@ -115,9 +116,8 @@ local function createPlayerButton(targetPlayer)
                 if event then
                     event:FireServer(capturedPlayer, cmd)
                 end
-                task.wait(0.05) -- delay mínimo para não floodar
-            end
-        end)
+            end)
+        end
     end)
 end
 
