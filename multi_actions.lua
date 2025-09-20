@@ -1,14 +1,16 @@
-local CoreGui = game:GetService("CoreGui")
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local PlayerGui = player:WaitForChild("PlayerGui")
 
--- Remove GUI antiga, se existir
-if CoreGui:FindFirstChild("BrainrotGui") then
-    CoreGui:FindFirstChild("BrainrotGui"):Destroy()
+-- Remove GUI antiga se existir
+if PlayerGui:FindFirstChild("BrainrotGui") then
+    PlayerGui:FindFirstChild("BrainrotGui"):Destroy()
 end
 
 -- Cria ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "BrainrotGui"
-ScreenGui.Parent = CoreGui
+ScreenGui.Parent = PlayerGui
 
 -- Cria Frame
 local Frame = Instance.new("Frame")
