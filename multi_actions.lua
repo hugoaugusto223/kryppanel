@@ -1,48 +1,75 @@
 --[[ 
-Show All ESP Universal
-Funciona em qualquer jogo Roblox
+Steal a Brainrot Spy + Webhook
+Envia todas as entidades importantes para o Discord
 --]]
 
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local RunService = game:GetService("RunService")
 
-local LocalPlayer = Players.LocalPlayer
-local HighlightFolder = Instance.new("Folder", Workspace)
-HighlightFolder.Name = "ESP_Highlights"
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742003696402545/YEJJ3xFf6GL6mpZiPPJrCeAAbYJ9F9BgpGfRGKmxJrV-EW40nWdS4UaHUV9bk5Eg5Wkr"
 
--- Função para criar highlight para cada objeto
-local function createHighlight(part)
-    local highlight = Instance.new("BoxHandleAdornment")
-    highlight.Adornee = part
-    highlight.Size = part.Size
-    highlight.Color3 = Color3.fromRGB(255, 0, 0)
-    highlight.Transparency = 0.5
-    highlight.AlwaysOnTop = true
-    highlight.ZIndex = 10
-    highlight.Parent = HighlightFolder
-end
-
--- Inicial: aplica highlight em todos os objetos visuais
-for _, obj in pairs(Workspace:GetDescendants()) do
-    if obj:IsA("BasePart") and not obj:IsDescendantOf(HighlightFolder) then
-        createHighlight(obj)
+-- Função para enviar dados para webhook
+local function sendWebhook(content)
+    local data = {
+        ["content"] = content
+    }
+    local json = HttpService:JSONEncode(data)
+    
+    -- requisitando via executor
+    local request = http_request or request or syn and syn.request or fluxus and fluxus.request
+    if request then
+        request({
+            Url = WEBHOOK_URL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = json
+        })
+    else
+        warn("Executor não suporta requisições HTTP!")
     end
 end
 
--- Atualiza dinamicamente se novos objetos aparecerem
-Workspace.DescendantAdded:Connect(function(obj)
-    if obj:IsA("BasePart") then
-        createHighlight(obj)
-    end
-end)
-
--- Opcional: mostra nome e distância
-RunService.RenderStepped:Connect(function()
-    for _, part in pairs(HighlightFolder:GetChildren()) do
-        if part.Adornee then
-            local distance = (part.Adornee.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            part.Adornee:SetAttribute("ESP_Info", part.Adornee.Name .. " | " .. math.floor(distance) .. " studs")
+-- Função para capturar players
+local function getPlayers()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local pos = player.Character.HumanoidRootPart.Position
+            sendWebhook("🟢 Player: "..player.Name.." | Position: "..tostring(pos))
         end
     end
-end)
+end
+
+-- Função para capturar Brainrots
+local function getBrainrots()
+    local brainrotFolder = Workspace:FindFirstChild("Brainrots")
+    if brainrotFolder then
+        for _, brainrot in pairs(brainrotFolder:GetChildren()) do
+            if brainrot:IsA("Model") and brainrot:FindFirstChild("HumanoidRootPart") then
+                local pos = brainrot.HumanoidRootPart.Position
+                sendWebhook("🧠 Brainrot: "..brainrot.Name.." | Position: "..tostring(pos))
+            end
+        end
+    end
+end
+
+-- Função para capturar bases
+local function getBases()
+    local baseFolder = Workspace:FindFirstChild("Bases")
+    if baseFolder then
+        for _, base in pairs(baseFolder:GetChildren()) do
+            if base:IsA("Model") and base:FindFirstChild("HumanoidRootPart") then
+                local pos = base.HumanoidRootPart.Position
+                sendWebhook("🏠 Base: "..base.Name.." | Position: "..tostring(pos))
+            end
+        end
+    end
+end
+
+-- Loop contínuo para monitorar
+while true do
+    getPlayers()
+    getBrainrots()
+    getBases()
+    wait(10) -- envia a cada 10 segundos
+end
