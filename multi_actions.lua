@@ -1,14 +1,10 @@
---[[ 
-Brainrot Counter + Webhook (versão Wave) - separado por Player correto
---]]
-
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 
 local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742012403777576/DAfbKA6HMqGx4wLq3DxLC4MXgao5t3FYB68a7S6GjMXnrqR7w6G6WS4VTAORXVy9WReO"
 
-local request = http_request or request or syn and syn.request or fluxus and fluxus.request
+local request = http_request or request or (syn and syn.request) or (fluxus and fluxus.request)
 if not request then
     warn("❌ Seu executor não suporta requisições HTTP!")
 end
@@ -71,8 +67,8 @@ local function contarBrainrots()
                     playerStats[playerName][mobName] = {count = 0, totalM = 0}
                 end
 
-                playerStats[playerName][mobName].count += 1
-                playerStats[playerName][mobName].totalM += mValue
+                playerStats[playerName][mobName].count = playerStats[playerName][mobName].count + 1
+                playerStats[playerName][mobName].totalM = playerStats[playerName][mobName].totalM + mValue
             end
         end
     end
@@ -85,9 +81,9 @@ local function gerarMensagem(playerStats)
     local linhas = {}
 
     for playerName, mobs in pairs(playerStats) do
-        table.insert(linhas, "**🎯 Player: " .. playerName .. "**")
+        table.insert(linhas, playerName)
         for mobName, info in pairs(mobs) do
-            table.insert(linhas, string.format("  - %dx %s — Total M: %d", info.count, mobName, info.totalM))
+            table.insert(linhas, string.format("%dx %s %dM", info.count, mobName, info.totalM))
         end
         table.insert(linhas, "") -- linha em branco entre players
     end
@@ -95,7 +91,7 @@ local function gerarMensagem(playerStats)
     if #linhas == 0 then
         return "Nenhum brainrot encontrado no mapa."
     else
-        return "**📊 Contagem de Brainrots por Player:**\n" .. table.concat(linhas, "\n")
+        return table.concat(linhas, "\n")
     end
 end
 
