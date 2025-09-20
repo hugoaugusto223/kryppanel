@@ -1,3 +1,7 @@
+--[[ 
+Brainrot Counter + Webhook (versão Wave) - separado por Player correto
+--]]
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
@@ -35,40 +39,26 @@ end
 local function contarBrainrots()
     local playerStats = {}
 
-    for _, o in ipairs(Workspace:GetDescendants()) do
-        if o:IsA("TextLabel") and o.Name == "Generation" and not o.Text:lower():find("fusing") then
-            local parent = o.Parent
-            local basePart
-            local playerName = "Desconhecido"
+    for _, baseModel in ipairs(Workspace:GetChildren()) do
+        if baseModel:IsA("Model") and baseModel:FindFirstChild("Base") then
+            local playerName = baseModel.Name:gsub("_Base", "")
+            playerStats[playerName] = playerStats[playerName] or {}
 
-            -- Busca o Model que contém Base
-            while parent and parent ~= Workspace do
-                if parent:IsA("Model") and parent:FindFirstChild("Base") then
-                    basePart = parent.Base
-                    -- Pega o nome do Player a partir do nome do Model (ex.: "SlimShady_Base")
-                    playerName = parent.Name:gsub("_Base","")
-                    break
+            for _, descendant in ipairs(baseModel:GetDescendants()) do
+                if descendant:IsA("TextLabel") and descendant.Name == "Generation" and not descendant.Text:lower():find("fusing") then
+                    local displayName = descendant.Parent:FindFirstChild("DisplayName")
+                    local mobName = displayName and displayName.Text or "N/A"
+
+                    local mValueLabel = descendant.Parent:FindFirstChild("MValue")
+                    local mValue = tonumber(mValueLabel and mValueLabel.Text:match("%d+")) or 0
+
+                    if not playerStats[playerName][mobName] then
+                        playerStats[playerName][mobName] = {count = 0, totalM = 0}
+                    end
+
+                    playerStats[playerName][mobName].count = playerStats[playerName][mobName].count + 1
+                    playerStats[playerName][mobName].totalM = playerStats[playerName][mobName].totalM + mValue
                 end
-                parent = parent.Parent
-            end
-
-            if basePart then
-                local displayName = o.Parent:FindFirstChild("DisplayName")
-                local mobName = displayName and displayName.Text or "N/A"
-
-                local mValueLabel = o.Parent:FindFirstChild("MValue")
-                local mValue = tonumber(mValueLabel and mValueLabel.Text:match("%d+")) or 0
-
-                if not playerStats[playerName] then
-                    playerStats[playerName] = {}
-                end
-
-                if not playerStats[playerName][mobName] then
-                    playerStats[playerName][mobName] = {count = 0, totalM = 0}
-                end
-
-                playerStats[playerName][mobName].count = playerStats[playerName][mobName].count + 1
-                playerStats[playerName][mobName].totalM = playerStats[playerName][mobName].totalM + mValue
             end
         end
     end
@@ -91,23 +81,23 @@ local function gerarMensagem(playerStats)
     if #linhas == 0 then
         return "Nenhum brainrot encontrado no mapa."
     else
+local function gerarMensagem(playerStats)
+    local linhas = {}
+
+    for playerName, mobs in pairs(playerStats) do
+        table.insert(linhas, "Base de: " .. playerName)
+        for mobName, info in pairs(mobs) do
+            table.insert(linhas, string.format("  %dx %s (%dM)", info.count, mobName, info.totalM))
+        end
+        table.insert(linhas, "") -- linha em branco entre players
+    end
+
+    if #linhas == 0 then
+        return "Nenhum brainrot encontrado no mapa."
+    else
         return table.concat(linhas, "\n")
     end
 end
-
--- GUI
-local player = Players.LocalPlayer
-if not player then warn("LocalPlayer não encontrado!") return end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BrainrotCounter"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 300, 0, 160)
-Frame.Position = UDim2.new(0, 20, 0, 200)
-Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
 
@@ -171,3 +161,4 @@ SendButton.MouseButton1Click:Connect(function()
         warn("Erro ao enviar: ", err)
     end
 end)
+
