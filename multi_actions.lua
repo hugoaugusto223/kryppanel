@@ -1,12 +1,12 @@
 --[[ 
-    Brainrot Counter + Webhook (com GUI)
+    Brainrot Counter + Webhook (com GUI e webhook já configurado)
     Funciona no Wave e outros executores
 --]]
 
 ------------------------------
 -- CONFIGURAÇÕES
 ------------------------------
-local WEBHOOK_URL = "COLOCA_AQUI_SEU_WEBHOOK" -- <<< TROCA PELO SEU WEBHOOK
+local WEBHOOK_URL = "https://discord.com/api/webhooks/1418742012403777576/DAfbKA6HMqGx4wLq3DxLC4MXgao5t3FYB68a7S6GjMXnrqR7w6G6WS4VTAORXVy9WReO"
 ------------------------------
 
 local Players = game:GetService("Players")
@@ -28,7 +28,7 @@ ScreenGui.Parent = PlayerGui
 
 local Frame = Instance.new("Frame")
 Frame.Size = UDim2.new(0, 260, 0, 150)
-Frame.Position = UDim2.new(1, -270, 1, -160) -- canto inferior direito
+Frame.Position = UDim2.new(0, 10, 1, -160) -- canto inferior esquerdo
 Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Frame.BorderSizePixel = 0
 Frame.Parent = ScreenGui
@@ -91,9 +91,9 @@ local function addBrainrot(playerName, brainrotName, amount)
     brainrotCounter[playerName][brainrotName] += amount
 end
 
--- SIMULAÇÃO: Aqui você substitui pelo evento real do jogo
--- Exemplo de como adicionar (simulação)
--- addBrainrot("João", "Los Combi", 60)
+-- SIMULAÇÃO: Testando manualmente
+-- addBrainrot("Kryp", "Los Combi", 60)
+-- addBrainrot("Kryp", "La Grande Combinassion", 15)
 
 --------------------------------
 -- ENVIO PARA DISCORD
@@ -115,7 +115,14 @@ local function sendToDiscord()
         message = message .. "\n"
     end
 
+    if message == "**Brainrot Report**\n\n" then
+        StatusLabel.Text = "Nenhum brainrot registrado!"
+        StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+        return
+    end
+
     local data = {
+        ["username"] = "Brainrot Bot",
         ["content"] = message
     }
 
@@ -124,18 +131,26 @@ local function sendToDiscord()
     -- Envia requisição HTTP
     local request = (http_request or request or syn and syn.request or fluxus and fluxus.request)
     if request then
-        request({
-            Url = WEBHOOK_URL,
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json"
-            },
-            Body = jsonData
-        })
-        StatusLabel.Text = "Enviado com sucesso!"
-        StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        local success, response = pcall(function()
+            return request({
+                Url = WEBHOOK_URL,
+                Method = "POST",
+                Headers = {
+                    ["Content-Type"] = "application/json"
+                },
+                Body = jsonData
+            })
+        end)
+
+        if success then
+            StatusLabel.Text = "Enviado com sucesso!"
+            StatusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        else
+            StatusLabel.Text = "Erro ao enviar!"
+            StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
+        end
     else
-        StatusLabel.Text = "Executor sem suporte HTTP!"
+        StatusLabel.Text = "Executor sem HTTP!"
         StatusLabel.TextColor3 = Color3.fromRGB(255, 0, 0)
     end
 end
